@@ -1,0 +1,50 @@
+{
+  "name": "kimi-datasource",
+  "version": "1.0.0",
+  "description": "CLI for Kimi data sources (stocks, macro, enterprise, arXiv, law). Auto OAuth refresh. Bun-compileable single binary.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "kimi-datasource": "./bin/kimi-datasource.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "scripts",
+    "install",
+    "SKILL.md",
+    "watchlist.json",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17",
+    "bun": ">=1.1"
+  },
+  "keywords": [
+    "cli",
+    "kimi",
+    "datasource",
+    "finance",
+    "stock",
+    "arxiv",
+    "bun",
+    "skill"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Demogorgon314/kimi-datasource.git"
+  },
+  "scripts": {
+    "start": "bun ./bin/kimi-datasource.mjs",
+    "dev": "bun ./bin/kimi-datasource.mjs",
+    "login": "bun ./bin/kimi-datasource.mjs login",
+    "status": "bun ./bin/kimi-datasource.mjs status",
+    "build": "bun run scripts/build.mjs",
+    "build:node": "bun build ./bin/kimi-datasource.mjs --compile --target=bun --outfile dist/kimi-datasource",
+    "install:local": "bash ./install/install.sh",
+    "smoke": "bun ./scripts/smoke.mjs",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
+  }
+}
