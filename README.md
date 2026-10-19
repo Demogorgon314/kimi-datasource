@@ -3,7 +3,9 @@
 Standalone **CLI** for the structured **Kimi Data Sources included with your existing Kimi subscription**:
 
 - A-share / HK / US stocks & financials
-- Yahoo Finance · World Bank · Tianyancha
+- Wind (minute quotes, funds, bonds, macro) · Yahoo Finance · SEC EDGAR · S&P Capital IQ · Gildata
+- World Bank · IMF · FRED · NBS · WHO / FAO / OECD and other international organizations
+- Chinese government data catalogs and standards · Xinhua Finance / Caixin news · Tianyancha
 - arXiv / Google Scholar · Chinese law (`yuandian_law`)
 
 The CLI authenticates with your existing Kimi account and uses the data-source access already available to that subscription. It is not a separate data provider and does not require individual API keys for Yahoo Finance, World Bank, Tianyancha, arXiv, Scholar, or the other underlying sources.
@@ -17,7 +19,7 @@ Compile to a single binary with **Bun**.
 - You must already have a Kimi subscription or account with access to Kimi Data Sources through the Coding tools gateway.
 - The CLI reuses that existing entitlement; installing this project does not grant or purchase additional data access.
 - Available sources, APIs, fields, limits, and freshness are controlled by Kimi and may vary with the account or environment.
-- Run `kimi-datasource sources` and `kimi-datasource desc <source>` to inspect the access currently available to your account.
+- `kimi-datasource sources` lists the 25 known sources aligned with managed plugin **3.4.0**. It is a local catalog, not an account entitlement check. Run `kimi-datasource desc <source>` for current documentation; actual calls remain subject to account access.
 
 ## Requirements
 
@@ -86,6 +88,46 @@ kimi-datasource call arxiv search_papers \
 | `desc <source>` | API docs (auto refresh) |
 | `call <source> <api> …` | Invoke API (auto refresh) |
 
+### Data sources
+
+| Source | Coverage |
+|--------|----------|
+| `stock_finance_data` | A-share / HK / US quotes, historical prices, financials |
+| `yahoo_finance` | Global financial data, analyst ratings, options, institutional holders |
+| `world_bank_open_data` | Long-term historical macroeconomic indicators |
+| `tianyancha` | Chinese company registry, ownership and risks |
+| `arxiv`, `scholar` | Preprints and academic search |
+| `yuandian_law` | Chinese laws, regulations and judicial cases |
+| `wind` | Securities, minute quotes, funds, bonds, macro, announcements and financial news |
+| `imf` | Long-term FX, CPI, GDP forecasts and balance of payments |
+| `gildata` | Natural-language stock, fund and fund-manager screening |
+| `sec_edgar` | US filings: 10-K / 10-Q, S-1, Form 4, 13F, 8-K |
+| `sp_data` | S&P Capital IQ fundamentals, estimates, valuations and transcripts (paid scope) |
+| `china_nda` | National and provincial government open-data catalogs |
+| `china_nbs` | NBS national, provincial and major-city statistics |
+| `china_standards` | GB / HB / DB / TT standards |
+| `who`, `fao`, `unsd` | Health, food / agriculture and UN statistics |
+| `ecb`, `eurostat` | ECB and EU statistics |
+| `unicef`, `oecd`, `fred` | Child indicators, OECD datasets, US / global macro series |
+| `xhcj`, `caixin` | Xinhua Finance news / announcements / policies and Caixin data APIs |
+
+Use a source the user names directly. For a simple lookup, choose one suitable source, read its `desc`, and stop once the result covers the question. Field, entity and API discovery may require follow-up calls within that source. Use multiple sources when a cross-source comparison is requested.
+
+### Wind
+
+Read the live API documentation first, then discover the native field name before requesting PE, PB, ROE or market cap:
+
+```bash
+kimi-datasource desc wind --quiet
+kimi-datasource call wind wind_search_fields \
+  --param query=总市值 --param limit=5 \
+  --file-path /tmp/wind-market-cap-fields.csv --output json
+```
+
+Use the returned field name with the appropriate API documented by `desc`. Current Wind APIs distinguish snapshots (`*_price_indicators`), historical daily / weekly / monthly series (`*_price` / `wind_get_price`), and minute quotes (`*_quote`). Open-ended mutual funds have no intraday minute quotes. Macro indicator search returns metadata; query the time-series API for values.
+
+These examples describe the current contract, not a fixed API guarantee. Other discovery steps include `caixin_api_search` for Caixin APIs and company search for Tianyancha entities. For long-term FX or GDP forecasts choose IMF; Yahoo Finance FX history is limited to about two years. Use NBS for Chinese official statistics, `china_nda` for dataset catalogs, and `china_standards` for standards rather than legal cases.
+
 ### `call` options
 
 ```text
@@ -144,6 +186,8 @@ kimi-datasource  ──ensureFresh──►  auth.kimi.com
 ```
 
 Refresh threshold: `max(300s, expires_in * 0.5)`.
+
+On a gateway 401, the CLI reuses a credential rotated by the Kimi Code host if available; otherwise it forces an OAuth refresh. It retries the gateway request at most once.
 
 ## Layout
 

@@ -144,6 +144,61 @@ describe('Kimi tools gateway client', () => {
     expect(refreshCalls).toBe(1);
   });
 
+  test('reuses a host-rotated credential without issuing another OAuth refresh', async () => {
+    await useTemporaryCredentials();
+    const sentTokens = [];
+    globalThis.fetch = async (url, init) => {
+      if (String(url).includes('/api/oauth/token')) {
+        throw new Error('The host already refreshed the shared credential');
+      }
+      sentTokens.push(init.headers.Authorization);
+      if (sentTokens.length === 1) {
+        saveTokenWire({
+          access_token: 'host-access',
+          refresh_token: 'host-refresh',
+          expires_at: Math.floor(Date.now() / 1000) + 3_600,
+          expires_in: 3_600,
+        });
+        return new Response('rotated by host', { status: 401 });
+      }
+      return new Response(JSON.stringify(toolResponse('recovered')), {
+        status: 200,
+        headers: { 'x-request-id': 'retry-request' },
+      });
+    };
+
+    const result = await getDataSourceDesc('wind');
+
+    expect(sentTokens).toEqual(['Bearer access-token', 'Bearer host-access']);
+    expect(result.text).toContain('recovered');
+    expect(result.trace).toMatchObject({ refreshed: true, requestId: 'retry-request' });
+  });
+
+  test('stops after one gateway retry when the replacement credential is also rejected', async () => {
+    await useTemporaryCredentials();
+    let gatewayCalls = 0;
+    let refreshCalls = 0;
+    globalThis.fetch = async (url, init) => {
+      if (String(url).includes('/api/oauth/token')) {
+        refreshCalls += 1;
+        return new Response(JSON.stringify({
+          access_token: 'replacement-access',
+          refresh_token: 'replacement-refresh',
+          expires_in: 3_600,
+        }), { status: 200 });
+      }
+      gatewayCalls += 1;
+      expect(init.headers.Authorization).toBe(
+        gatewayCalls === 1 ? 'Bearer access-token' : 'Bearer replacement-access',
+      );
+      return new Response('rejected', { status: 401 });
+    };
+
+    await expect(getDataSourceDesc('wind')).rejects.toThrow('HTTP 401 error: rejected');
+    expect(gatewayCalls).toBe(2);
+    expect(refreshCalls).toBe(1);
+  });
+
   test('returns a useful fallback for unexpected successful payloads', async () => {
     await useTemporaryCredentials();
     globalThis.fetch = async () => new Response(JSON.stringify({ unexpected: true }), { status: 200 });

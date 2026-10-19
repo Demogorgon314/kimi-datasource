@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 2026-10-18
+
+- Align the known source catalog with managed kimi-datasource plugin 3.4.0: add Wind, IMF, Gildata, SEC EDGAR, S&P Capital IQ, Chinese government catalogs / NBS / standards, WHO, FAO, UNSD, ECB, Eurostat, UNICEF, OECD, FRED, Xinhua Finance and Caixin (25 sources total)
+- Update CLI help, README and Agent Skill with source routing, capability boundaries, Wind field discovery and Caixin API discovery
+- Clarify that the local source catalog does not guarantee account entitlement
+- Reuse host-rotated credentials before forcing OAuth refresh on a gateway 401, keeping a single retry
+
 ## 1.0.0 - 2026-07-20
 
 - Initial CLI-only release with automatic Kimi OAuth refresh

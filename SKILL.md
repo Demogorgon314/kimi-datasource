@@ -1,7 +1,7 @@
 ---
 name: kimi-datasource
 description: |
-  通过 kimi-datasource CLI 查询外部结构化数据，并自动刷新 Kimi OAuth 凭据。用于 A股、港股、美股的行情、指数、财报、技术指标，Yahoo Finance 全球金融数据，World Bank 宏观经济指标，中国企业工商及风险信息，arXiv 或 Google Scholar 论文，以及中国法律法规和司法案例；也用于自选股行情与对比。调用具体接口前必须先运行 `kimi-datasource desc` 获取当前 API 文档。
+  通过 kimi-datasource CLI 查询 Kimi 结构化数据，并自动刷新 OAuth 凭据。用于 Wind 等证券与基金债券数据、全球宏观与官方统计、中国政府数据目录与标准、企业工商、论文、法律及财经新闻，也用于自选股查询。调用具体接口前先运行 `kimi-datasource desc` 获取当前 API 文档。
 ---
 
 # kimi-datasource
@@ -10,15 +10,17 @@ description: |
 
 ## 标准流程
 
-1. 根据下表选择一个数据源。
+1. 用户点名数据源时直接使用；否则根据下表选择最匹配的一个。
 2. 运行 `kimi-datasource desc <source> --quiet`。
 3. 完整阅读返回文档中的代码格式、必填参数、枚举、默认值和批量限制。
 4. 选择最符合用户请求的已记录 API。
-5. 核对标识符、构造参数并调用 API。
+5. 核对标识符；需要先发现字段、接口或实体时，按文档完成检索，再构造参数调用取数 API。
 6. 简单问题读取 `data_preview`；分析任务读取命令实际写出的所有 CSV。
 7. 使用用户的语言回答，并说明重要的数据限制。
 
 同一任务中，如果数据源和接口契约没有变化，可复用刚获取的 `desc`；切换数据源或怀疑接口已变化时重新获取。
+
+简单查询只选一个数据源，不要并行读取多个源的 `desc`。结果已覆盖问题时停止调用；不要为补充字段、重新格式化或交叉验证继续取数。用户明确要求跨源对比时再查询多个源。字段、接口与实体发现，以及批量限制要求的分批取数，可以在选定源内继续完成。
 
 ```bash
 kimi-datasource desc arxiv --quiet
@@ -48,8 +50,37 @@ printf '%s' '{"query":"RAG","file_path":"/tmp/arxiv-rag.csv"}' |
 | arXiv 预印本和论文编号 | `arxiv` | 最新论文、主题检索、论文元数据 |
 | 更广泛且偏引用关系的学术检索 | `scholar` | 高引论文、作者检索、引用情况 |
 | 中国法律法规和司法案例 | `yuandian_law` | 法条、司法解释、相关案例 |
+| Wind 万得证券、基金、债券、宏观与金融文档 | `wind` | 分钟线、基金净值、国债收益率、财务指标 |
+| IMF 国际宏观 | `imf` | 长期汇率、CPI、GDP 预测、国际收支 |
+| 恒生聚源自然语言筛选 | `gildata` | 条件选股、选基金、基金经理筛选 |
+| 美国 SEC 披露文件 | `sec_edgar` | 10-K、10-Q、S-1、Form 4、13F、8-K |
+| S&P Capital IQ 美股基本面 | `sp_data` | 一致预期、估值、持有人、电话会记录（受账户付费权限限制） |
+| 国家数据局开放数据目录 | `china_nda` | 公共数据资源登记、各省开放数据集 |
+| 国家统计局宏观指标 | `china_nbs` | 全国、省、主要城市的 GDP、CPI、人口与就业 |
+| 中国标准 | `china_standards` | GB 国标、HB 行标、DB 地标、TT 团标 |
+| WHO 健康统计 | `who` | 预期寿命、婴儿死亡率 |
+| FAO 农业粮食 | `fao` | 粮食产量、农产品价格 |
+| 联合国统计司 UNdata | `unsd` | 统计年鉴、国际贸易 |
+| 欧洲央行 | `ecb` | 欧元区利率、货币供应量 |
+| 欧盟统计局 | `eurostat` | 欧盟失业率、CPI |
+| 联合国儿童基金会 | `unicef` | 儿童营养、免疫接种率 |
+| OECD 数据 | `oecd` | 成员国经济、教育支出 |
+| FRED 宏观序列 | `fred` | 美国 CPI、联邦基金利率 |
+| 新华财经 | `xhcj` | 快讯、公司公告、政策新闻 |
+| 财新数据库 | `caixin` | 财新新闻与数据，先检索接口 |
 
-本 CLI 不提供通用 Web 搜索或实时新闻。遇到这类请求时，改用环境中其他合适的数据源；没有可用来源时明确说明限制。
+以上 25 个源对齐托管插件 3.4.0；`sources` 返回本地已知列表，不代表账户已获全部权限。具体 API、参数、权限和数据时效以当前 `desc` 与实际返回为准。本 CLI 不提供通用 Web 搜索；财经新闻可走 `xhcj`、`caixin` 或 Wind 文档中记录的新闻接口，其他新闻使用环境中合适的来源。
+
+### 能力边界与发现流程
+
+- 分钟级行情走 `wind`；普通行情快照、财务与历史价格可按需求选 `stock_finance_data` 或 `yahoo_finance`。Wind 的股票、指数和交易所基金分钟线与日/周/月历史序列是不同接口；开放式基金没有盘中分钟线。
+- Wind 的 `indexes` / `indicators` 使用原生字段名。PE、PB、ROE、总市值等常用字段先通过当前 `desc` 中的 `wind_search_fields` 映射，支持别名和中文，一次查询一个字段；从返回值选择适合目标 API 的字段，不要硬猜。
+- Wind 宏观指标检索只返回名称、代码、频率、单位等元数据；要数值需继续调用文档中的时间序列接口，并遵守日期区间与观察条数的互斥约束。
+- `yahoo_finance` 外汇历史约限 2 年；长期汇率、CPI、GDP 预测用 `imf`。`world_bank_open_data` 适合 50 年以上的历史宏观序列。
+- 国内官方统计序列用 `china_nbs`；“有哪些开放数据集”用 `china_nda`；国际口径历史与预测用世界银行或 IMF。用户指定 WHO、FAO、UNSD、ECB、Eurostat、UNICEF、OECD、FRED 时直接选对应机构源。
+- `gildata` 接收自然语言筛选条件；企业工商档案用 `tianyancha`。股东或持仓在 Yahoo、SEC 13F、S&P 中的口径和深度不同，按问题选源。
+- 标准用 `china_standards`，法律法规与判例用 `yuandian_law`。
+- `xhcj` 偏快讯、公告与政策；`caixin` 覆盖 600+ 接口，先按当前 `desc` 调用 `caixin_api_search` 发现接口，再取数。
 
 ## 标识符与参数规则
 

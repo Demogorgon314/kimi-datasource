@@ -1,7 +1,7 @@
 {
   "name": "kimi-datasource",
-  "version": "1.0.0",
-  "description": "CLI for Kimi data sources (stocks, macro, enterprise, arXiv, law). Auto OAuth refresh. Bun-compileable single binary.",
+  "version": "1.1.0",
+  "description": "CLI for 25 Kimi data sources: Wind, SEC, S&P, macro, government data, standards, news, enterprise, papers and law. Auto OAuth refresh.",
   "license": "MIT",
   "type": "module",
   "bin": {
